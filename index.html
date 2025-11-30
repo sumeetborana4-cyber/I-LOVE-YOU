@@ -1,0 +1,563 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover" />
+  <title>Will You Marry Me? — Mobile Optimized</title>
+
+  <!-- Tailwind CDN (kept from original) -->
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <!-- Fonts & libs -->
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;700;900&family=Inter:wght@300;400;600;700&display=swap" rel="stylesheet">
+  <script src="https://unpkg.com/three@0.152.2/build/three.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/gsap.min.js"></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.2/ScrollToPlugin.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+
+  <style>
+    :root{
+      --bg-dark:#0c0a09;
+      --glass:rgba(255,255,255,0.04);
+      --glass-border:rgba(255,255,255,0.06);
+      --muted:#dcdcdc;
+      --pinkA:hsla(333,70%,55%,1);
+      --pinkB:#ff416c;
+      --redB:#ff4b2b;
+      --card-radius:14px;
+    }
+
+    /* --- Base --- */
+    html,body{height:100%;}
+    body{
+      margin:0;
+      min-height:100%;
+      font-family:"Satoshi","Inter",system-ui,-apple-system,"Segoe UI",Roboto,"Helvetica Neue",Arial;
+      background:var(--bg-dark);
+      color:#eaeaea;
+      -webkit-font-smoothing:antialiased;
+      -moz-osx-font-smoothing:grayscale;
+      -webkit-touch-callout:none;
+      -webkit-tap-highlight-color:transparent;
+      /* allow scrolling on mobile as requested */
+      overflow:auto;
+      -ms-overflow-style: none;
+      scrollbar-width: none;
+    }
+    body::-webkit-scrollbar{ display:none; }
+
+    .aurora{position:fixed;inset:0;z-index:0;background:
+      radial-gradient(600px 400px at 10% 20%, rgba(255,64,129,0.12), transparent 20%),
+      radial-gradient(500px 350px at 85% 30%, rgba(146,43,255,0.08), transparent 18%),
+      radial-gradient(600px 450px at 50% 85%, rgba(0,120,255,0.07), transparent 20%),
+      radial-gradient(400px 300px at 75% 80%, rgba(255,191,64,0.06), transparent 16%);
+      filter:blur(40px) saturate(120%);animation:aurora-breathe 18s linear infinite;mix-blend-mode:screen;pointer-events:none}
+    .aurora::after{content:"";position:absolute;inset:0;background:
+      radial-gradient(700px 300px at 20% 10%, hsla(333,70%,55%,.18), transparent 25%),
+      radial-gradient(600px 300px at 80% 30%, hsla(282,82%,54%,.14), transparent 25%),
+      radial-gradient(600px 400px at 50% 80%, hsla(210,89%,60%,.12), transparent 25%),
+      radial-gradient(400px 200px at 70% 75%, hsla(35,90%,60%,.08), transparent 23%);
+      filter:blur(36px);animation:aurora-flow 28s linear infinite alternate;mix-blend-mode:screen;opacity:.95}
+    @keyframes aurora-breathe{0%{transform:scale(1) translateY(0);opacity:.9}50%{transform:scale(1.03) translateY(-6px);opacity:1}100%{transform:scale(1) translateY(0);opacity:.9}}
+    @keyframes aurora-flow{0%{transform:translateX(-6%) translateY(0) rotate(0deg)}100%{transform:translateX(6%) translateY(-3%) rotate(1.5deg)}}
+
+    #three-bg{position:fixed;inset:0;z-index:1;pointer-events:none}
+
+    /* progress */
+    .progress-wrap{position:fixed;left:50%;transform:translateX(-50%);top:14px;z-index:60;width:min(760px,92%);height:8px;display:flex;align-items:center;justify-content:center;pointer-events:none}
+    .progress-track{width:100%;height:8px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:999px;backdrop-filter:blur(6px);border:1px solid var(--glass-border);padding:2px;box-shadow:0 6px 30px rgba(0,0,0,0.6)}
+    .progress-bar{width:0%;height:100%;border-radius:999px;background: linear-gradient(90deg,#ff9a9e,#ff4b2b);box-shadow:0 6px 30px rgba(255,75,43,0.14), 0 1px 0 rgba(255,255,255,0.03) inset;transition:width .6s cubic-bezier(.2,.9,.3,1)}
+
+    .stage{position:relative;z-index:10;display:flex;align-items:flex-start;justify-content:center;padding:28px 16px 80px;min-height:100vh;box-sizing:border-box}
+    .card{width:100%;max-width:980px;background:linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));border-radius:var(--card-radius);border:1px solid var(--glass-border);box-shadow:0 8px 40px rgba(2,6,23,0.6);backdrop-filter:blur(14px) saturate(120%);padding:28px;color:var(--muted);position:relative;overflow:visible}
+
+    .title{font-family:"Playfair Display",serif;font-weight:700;font-size:clamp(1.4rem,2.6vw,2.2rem);line-height:1.05;margin:0 0 12px 0;background:linear-gradient(90deg,#ffbfd3,#fff,#ffdbe6);-webkit-background-clip:text;background-clip:text;color:transparent}
+    p.lead{margin:12px 0 18px 0;color:#d9d9d9;font-size:1.02rem}
+
+    .big-icon{font-size:56px;filter:drop-shadow(0 6px 24px rgba(255,0,128,0.12));display:inline-block;margin-right:8px}
+    .pulse{animation:pulse 1.5s infinite}
+    @keyframes pulse{0%{transform:scale(1)}50%{transform:scale(1.06)}100%{transform:scale(1)}}
+
+    .btn{display:inline-flex;align-items:center;justify-content:center;gap:.6rem;padding:14px 20px;border-radius:999px;font-weight:700;letter-spacing:.2px;cursor:pointer;border:none;outline:none;user-select:none;transition:transform .18s ease, box-shadow .18s ease;box-shadow:0 8px 30px rgba(255,75,43,0.12);background:linear-gradient(90deg,var(--pinkA),var(--pinkB),var(--redB));color:white;font-family:"Inter",system-ui}
+    .btn:active{transform:translateY(-2px) scale(.995)}
+    .btn[disabled]{opacity:.6;cursor:default}
+    .btn.small{padding:9px 12px;font-weight:700;border-radius:12px;font-size:.95rem}
+
+    .steps{position:relative;z-index:20;width:100%;display:block;padding:8px 0}
+    .step{position:absolute;width:100%;left:0;top:0;opacity:0;transform:translateY(20px) scale(.99);pointer-events:none;transition:opacity .5s ease, transform .5s cubic-bezier(.2,.9,.3,1)}
+    .step.active{opacity:1;transform:translateY(0) scale(1);pointer-events:auto}
+
+    .bento{display:grid;grid-template-columns:repeat(4,1fr);grid-auto-rows:minmax(100px,auto);gap:12px;margin-top:12px}
+    .bento .bento-card{background:rgba(255,255,255,0.02);border-radius:12px;padding:12px;border:1px solid rgba(255,255,255,0.03);box-shadow:0 6px 18px rgba(0,0,0,0.55);font-size:.95rem}
+    .span-2{grid-column:span 2}
+
+    .polaroid-wrap{perspective:1200px;display:flex;align-items:center;gap:16px}
+    .polaroid{width:260px;background:#fff;border-radius:10px;padding:12px;box-shadow:0 18px 60px rgba(2,6,23,0.6);transform-origin:center;transform:rotate(-6deg)}
+    .polaroid img{width:100%;height:170px;object-fit:cover;border-radius:6px;display:block}
+    .polaroid .caption{font-size:.9rem;color:#222;margin-top:8px;padding:8px 10px;border-radius:6px;text-align:center;font-weight:600}
+
+    .final-wish{display:flex;flex-direction:column-reverse;gap:12px;align-items:flex-start}
+    .final-text{font-family:"Playfair Display",serif;font-size:clamp(1.1rem,2.4vw,1.6rem);color:#fff;opacity:0;transform:translateY(10px)}
+
+    .thumbs{display:flex;gap:8px;margin-top:10px;overflow:auto;padding-bottom:6px}
+    .thumbs img{width:52px;height:52px;object-fit:cover;border-radius:6px;border:2px solid rgba(255,255,255,0.06);cursor:pointer;flex:0 0 auto}
+
+    /* Print styles */
+    .print-hidden{display:inline-block}
+    @media print{body *{visibility:hidden} #print-card, #print-card *{visibility:visible} #print-card{position:fixed;left:0;top:0;width:100%;} }
+
+    /* ---------- Mobile adjustments (primary) ---------- */
+    @media (max-width:860px){
+      .card{padding:18px;border-radius:12px}
+      .polaroid{width:100%;transform:rotate(-2deg)}
+      .bento{grid-template-columns:repeat(2,1fr);gap:10px}
+      .polaroid img{height:220px}
+      .big-icon{font-size:46px}
+      .title{font-size:1.6rem}
+      /* make steps stack and allow scrolling within a step by using display none/block */
+      .step{position:relative;left:auto;top:auto;transform:none;opacity:1;display:none;pointer-events:auto}
+      .step.active{display:block}
+      /* reduce heavy shadows on small screens */
+      .card{box-shadow:0 8px 28px rgba(2,6,23,0.6)}
+    }
+
+    @media (max-width:480px){
+      .btn{padding:12px 16px;font-size:15px}
+      .progress-wrap{top:12px}
+      .polaroid img{height:200px}
+      .thumbs img{width:46px;height:46px}
+      .title{font-size:1.4rem}
+      .final-text{font-size:1.2rem}
+    }
+  </style>
+</head>
+<body>
+  <div class="aurora" aria-hidden="true"></div>
+  <div id="three-bg" aria-hidden="true"></div>
+
+  <div class="progress-wrap" aria-hidden="true">
+    <div class="progress-track" role="progressbar" aria-valuemin="0" aria-valuemax="100">
+      <div id="progressBar" class="progress-bar" style="width:0%"></div>
+    </div>
+  </div>
+
+  <main class="stage" role="main">
+    <div class="steps" aria-live="polite">
+      <div class="card">
+
+        <!-- Step 1 -->
+        <section class="step active" id="step-1" data-step="1">
+          <div style="display:flex; align-items:center; justify-content:space-between; gap:14px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:180px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="big-icon pulse" aria-hidden="true">❤️</div>
+                <h1 class="title">Hey Meri jaan,</h1>
+              </div>
+              <p class="lead">I built this little world for you… because there’s something I need to confess from the bottom of my heart.</p>
+              <div style="margin-top:14px;">
+                <button class="btn" id="btn-1" aria-label="Let's begin">Let's Begin</button>
+              </div>
+            </div>
+            <div style="width:160px; display:flex;align-items:center;justify-content:center;">
+              <div aria-hidden="true" style="width:140px; height:140px; border-radius:18px; background: radial-gradient(circle at 30% 20%, rgba(255,192,203,0.14), transparent 30%), linear-gradient(180deg, rgba(255,255,255,0.02), rgba(0,0,0,0.03)); border:1px solid rgba(255,255,255,0.03); display:flex; align-items:center; justify-content:center;">
+                <div style="font-size:38px;">💓</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Step 2 -->
+        <section class="step" id="step-2" data-step="2">
+          <div style="display:flex; align-items:center; gap:14px; flex-wrap:wrap;">
+            <div style="flex:1; min-width:180px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="big-icon" aria-hidden="true">💌</div>
+                <h2 class="title">I Love You Meri Jaan</h2>
+              </div>
+              <p class="lead">Every moment with you feels magical. You make life warmer, softer, and so much more meaningful. I’ve fallen deeply for you.</p>
+              <div style="margin-top:14px;">
+                <button class="btn" id="btn-2" aria-label="Continue to next">There's something more...</button>
+              </div>
+            </div>
+            <div style="width:120px; display:flex;align-items:center;justify-content:center;">
+              <div style="width:120px; height:120px; border-radius:18px; display:flex; align-items:center; justify-content:center;">
+                <div style="font-size:36px;">✨</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- Step 3 -->
+        <section class="step" id="step-3" data-step="3">
+          <div>
+            <h2 class="title">A Few Things I Adore About You</h2>
+            <p class="lead" style="margin-bottom:8px;">I could list so many, but here are a few that live on repeat in my head.</p>
+
+            <div class="bento" style="margin-top:12px;">
+              <div class="bento-card span-2" style="display:flex; flex-direction:column; justify-content:center;">
+                <div style="font-weight:700; margin-bottom:6px;">✨ Your Unmatched Kindness</div>
+                <div style="font-size:.95rem; color:#e6e6e6;">The genuine warmth you show to everyone is something truly rare and beautiful.</div>
+              </div>
+              <div class="bento-card" style="display:flex; flex-direction:column; justify-content:center;">
+                <div style="font-weight:700; margin-bottom:6px;">😊 That Smile</div>
+                <div style="font-size:.95rem; color:#e6e6e6;">It's a work of art.</div>
+              </div>
+              <div class="bento-card span-2" style="display:flex; flex-direction:column; justify-content:center;">
+                <div style="font-weight:700; margin-bottom:6px;">🌟 Your Radiant Spirit</div>
+                <div style="font-size:.95rem; color:#e6e6e6;">Your passion for life is infectious. Being around you makes everything feel more exciting and possible.</div>
+              </div>
+            </div>
+
+            <div style="margin-top:16px;">
+              <button class="btn" id="btn-3">Remember this?</button>
+            </div>
+          </div>
+        </section>
+
+        <!-- Step 4 -->
+        <section class="step" id="step-4" data-step="4">
+          <div style="display:flex; gap:18px; flex-wrap:wrap; align-items:center;">
+            <div style="flex:1; min-width:180px;">
+              <h2 class="title">That One Time...</h2>
+              <p class="lead">Every moment with you feels like a scene from a movie I'd watch on repeat.</p>
+              <div style="margin-top:14px;">
+                <button class="btn" id="btn-4">One last thing...</button>
+              </div>
+            </div>
+
+            <div class="polaroid-wrap" style="flex:0 0 300px;">
+              <div>
+                <!-- upload control -->
+                <label for="photoInput" style="display:inline-block;margin-bottom:8px;color:#ddd;font-weight:600;cursor:pointer;">
+                  <input id="photoInput" type="file" accept="image/*" style="display:none" />
+                  <span class="btn small" id="uploadBtn" style="padding:9px 12px;font-size:.95rem;">Upload Photo</span>
+                </label>
+              </div>
+
+              <div class="polaroid" id="polaroid" aria-live="polite">
+                <img id="polaroidImg" src="https://s7.ezgif.com/tmp/ezgif-736250372299f29c.jpg" alt="Our memory" />
+                <div class="caption">Our favorite memory.</div>
+                <div class="thumbs" id="thumbs" style="display:none"></div>
+              </div>
+            </div>
+
+          </div>
+        </section>
+
+        <!-- Step 5: Proposal -->
+        <section class="step" id="step-5" data-step="5">
+          <div style="display:flex; gap:14px; flex-wrap:wrap; align-items:center;">
+            <div style="flex:1; min-width:180px;">
+              <div style="display:flex; align-items:center; gap:10px;">
+                <div class="big-icon" aria-hidden="true">💍</div>
+                <h2 class="title">My Heart's Wish</h2>
+              </div>
+
+              <p class="lead">I’ve never been more sure of anything. You are my peace, my happiness, and my future.</p>
+
+              <div style="margin-top:10px;">
+                <div class="final-wish">
+                  <div id="finalText" class="final-text">Will you marry me? ❤️ Yes/No</div>
+                  <div style="display:flex;gap:10px;align-items:center;flex-wrap:wrap;margin-top:6px;">
+                    <button class="btn" id="btn-5">Forever?</button>
+                    <button class="btn print-hidden" id="printBtn" style="background:linear-gradient(90deg,#6ee7b7,#3b82f6);">Print Proposal Card</button>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div style="width:120px; display:flex;align-items:center;justify-content:center;">
+              <div style="width:120px; height:120px; display:flex; align-items:center; justify-content:center;">
+                <div style="font-size:40px;">🥂</div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+      </div>
+    </div>
+  </main>
+
+  <!-- audio -->
+  <audio id="chime" preload="auto" src="https://cdn.jsdelivr.net/gh/jasonlong/cdn@master/sounds/chime.mp3"></audio>
+
+  <!-- confetti -->
+  <canvas id="confetti-canvas" style="position:fixed; inset:0; pointer-events:none; z-index:9999;"></canvas>
+
+  <!-- print -->
+  <div id="print-card" style="display:none;">
+    <div style="width:100%;max-width:760px;margin:40px auto;background:#fff;padding:24px;border-radius:12px;color:#111;">
+      <h1 style="font-family:Playfair Display,serif;font-size:28px;margin-bottom:6px;">Will you marry me?</h1>
+      <p style="font-size:16px;margin-bottom:12px;">My love,</p>
+      <p style="font-size:14px;line-height:1.5">I built this little world as a small space to tell you something enormous — I love you with all of me. Will you spend the rest of your life with me?</p>
+      <div style="margin-top:18px;text-align:center;">
+        <img id="printImg" src="https://i.ibb.co/6Z6XgCg/crush.webp" alt="memory" style="width:100%;max-width:500px;border-radius:8px;margin:auto;display:block" />
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /* ---------- Core navigation & progress ---------- */
+    const steps = [...document.querySelectorAll('.step')];
+    let current = 0;
+    const totalSteps = steps.length;
+    const progressBar = document.getElementById('progressBar');
+    function updateProgress(idx){
+      const percent = Math.round(((idx+1)/totalSteps) * 100);
+      progressBar.style.width = percent + '%';
+      const track = document.querySelector('.progress-track');
+      if(track) track.setAttribute('aria-valuenow', percent);
+    }
+    updateProgress(0);
+
+    function setActive(idx){
+      if(idx < 0 || idx >= steps.length) return;
+      steps.forEach((s,i)=> s.classList.toggle('active', i===idx));
+      current = idx;
+      updateProgress(idx);
+      /* on mobile, scroll active step into view */
+      const activeEl = steps[idx];
+      if(activeEl && activeEl.scrollIntoView) activeEl.scrollIntoView({behavior:'smooth', block: 'start'});
+    }
+
+    function goToStep(nextIndex){
+      if(nextIndex < 0 || nextIndex >= steps.length) return;
+      const prev = current;
+      const next = nextIndex;
+      if(prev === next) return;
+      // animate out previous & in next on larger screens, but still set active
+      const prevEl = steps[prev], nextEl = steps[next];
+      // try graceful animation; keep mobile-safe
+      try{
+        gsap.to(prevEl, { duration: 0.5, opacity:0, y: -10, scale:0.99, pointerEvents:'none', ease: "power3.inOut", onComplete: ()=> { prevEl.classList.remove('active'); }});
+        nextEl.classList.add('active');
+        gsap.fromTo(nextEl, {opacity:0, y:12, scale:0.98}, {duration:0.6, opacity:1, y:0, scale:1, pointerEvents:'auto', ease:"power3.out"});
+      } catch(e){
+        // fallback
+        steps.forEach((s,i)=> s.classList.toggle('active', i===next));
+      }
+      current = next; updateProgress(current);
+      // mobile friendly scroll
+      if(window.innerWidth <= 860){
+        steps[next].scrollIntoView({behavior:'smooth', block:'start'});
+      }
+    }
+
+    // wire up primary buttons
+    document.getElementById('btn-1').addEventListener('click', ()=> goToStep(1));
+    document.getElementById('btn-2').addEventListener('click', ()=> goToStep(2));
+    document.getElementById('btn-3').addEventListener('click', ()=> goToStep(3));
+    document.getElementById('btn-4').addEventListener('click', ()=> goToStep(4));
+
+    // keyboard nav (still works)
+    window.addEventListener('keydown', (e)=>{ if (e.key === 'ArrowRight' || e.key === 'Enter'){ if (current < steps.length - 1) goToStep(current + 1); } else if (e.key === 'ArrowLeft'){ if (current > 0) goToStep(current - 1); } });
+
+    /* ---------- Polaroid upload & thumbs ---------- */
+    (function polaroidUpload(){
+      const input = document.getElementById('photoInput');
+      const img = document.getElementById('polaroidImg');
+      const thumbs = document.getElementById('thumbs');
+      const uploadBtn = document.getElementById('uploadBtn');
+      uploadBtn.addEventListener('click', ()=> input.click());
+      input.addEventListener('change', (e)=>{
+        const files = Array.from(e.target.files);
+        if (!files.length) return;
+        files.forEach(file => {
+          const url = URL.createObjectURL(file);
+          img.src = url;
+          const t = document.createElement('img'); t.src = url; t.alt = 'thumb';
+          t.addEventListener('click', ()=> { img.src = t.src; document.getElementById('printImg').src = t.src; });
+          thumbs.appendChild(t);
+        });
+        thumbs.style.display = 'flex';
+        const printImg = document.getElementById('printImg'); if (printImg) printImg.src = img.src;
+      });
+    })();
+
+    // Polaroid tilt - allow touch fallback (tilt on pointermove only)
+    (function polaroidTilt(){
+      const polaroid = document.getElementById('polaroid');
+      if (!polaroid) return;
+      const applyTilt = (clientX, clientY) => {
+        const bounds = polaroid.getBoundingClientRect();
+        const cx = bounds.left + bounds.width/2; const cy = bounds.top + bounds.height/2;
+        const relX = (clientX - cx) / (bounds.width/2); const relY = (clientY - cy) / (bounds.height/2);
+        const tiltX = relY * 8; const tiltY = relX * -8;
+        gsap.to(polaroid, {duration:0.35, rotationX: tiltX, rotationY: tiltY, transformOrigin:'center', ease:'power3.out'});
+      };
+      polaroid.addEventListener('pointermove', (e)=> applyTilt(e.clientX, e.clientY), {passive:true});
+      polaroid.addEventListener('pointerleave', ()=> gsap.to(polaroid, {duration:0.5, rotationX:-6, rotationY:0, rotation:-6, ease:'power3.out'}));
+    })();
+
+    /* ---------- Three.js hearts (mobile-friendly) ---------- */
+    (function initThreeHearts(){
+      const container = document.getElementById('three-bg');
+      if(!container) return;
+      const renderer = new THREE.WebGLRenderer({alpha:true, antialias:true});
+      renderer.setClearColor(0x000000, 0); // transparent
+      const resize = ()=> {
+        const w = window.innerWidth;
+        const h = window.innerHeight;
+        renderer.setSize(w, h);
+        // clamp pixel ratio for mobile performance
+        const pr = Math.min(window.devicePixelRatio || 1, 2);
+        renderer.setPixelRatio(pr);
+      };
+      resize();
+      container.appendChild(renderer.domElement);
+
+      const scene = new THREE.Scene();
+      const camera = new THREE.PerspectiveCamera(50, window.innerWidth/window.innerHeight, 0.1, 2000);
+      camera.position.set(0,0,420);
+
+      const ambient = new THREE.AmbientLight(0xffffff, 0.7);
+      scene.add(ambient);
+      const dir = new THREE.DirectionalLight(0xffc1e3, 0.8);
+      dir.position.set(-200,100,100);
+      scene.add(dir);
+
+      function createHeartShape(scale = 1) {
+        const x=0,y=0; const heartShape = new THREE.Shape();
+        heartShape.moveTo(x,y+5);
+        heartShape.bezierCurveTo(x,y,x-6,y-6,x-12,y-6);
+        heartShape.bezierCurveTo(x-22,y-6,x-22,y+9,x-22,y+9);
+        heartShape.bezierCurveTo(x-22,y+18,x-12,y+27,x,y+34);
+        heartShape.bezierCurveTo(x+12,y+27,x+22,y+18,x+22,y+9);
+        heartShape.bezierCurveTo(x+22,y+9,x+22,y-6,x+12,y-6);
+        heartShape.bezierCurveTo(x+6,y-6,x,y,x,y+5);
+        const geometry = new THREE.ExtrudeGeometry(heartShape,{depth:6*scale,bevelEnabled:true,bevelSegments:2,steps:2,bevelSize:1.2*scale,bevelThickness:1.2*scale});
+        geometry.center();
+        return geometry;
+      }
+
+      const hearts = [];
+      const count = Math.min(22, Math.round((window.innerWidth/360)*14)); // fewer on very small screens
+      const group = new THREE.Group(); scene.add(group);
+
+      for(let i=0;i<count;i++){
+        const s = (Math.random()*0.6)+0.6;
+        const geom = createHeartShape(s*0.9);
+        const hue = 330 + (Math.random()*20);
+        const mat = new THREE.MeshStandardMaterial({
+          color: new THREE.Color(`hsl(${hue},80%,55%)`),
+          metalness:0.06, roughness:0.5,
+          emissive:new THREE.Color(`hsl(${hue},80%,12%)`), emissiveIntensity:0.04,
+          clearcoat:0.5, transparent:true, opacity:0.98
+        });
+        const mesh = new THREE.Mesh(geom, mat);
+        mesh.position.x = (Math.random()-0.5) * window.innerWidth * 0.7;
+        mesh.position.y = (Math.random()-0.5) * window.innerHeight * 0.55;
+        mesh.position.z = -200 + Math.random()*120;
+        mesh.rotation.x = Math.random()*2; mesh.rotation.y = Math.random()*2; mesh.rotation.z = Math.random()*2;
+        const scaleFactor = Math.max(3.2, (s*5.5));
+        mesh.scale.set(scaleFactor, scaleFactor, scaleFactor);
+        mesh.userData = { baseY: mesh.position.y, speed: 0.3 + Math.random()*0.5, drift: (Math.random()-0.5)*0.5, index: i };
+        group.add(mesh);
+        hearts.push(mesh);
+      }
+
+      window.addEventListener('resize', ()=>{ camera.aspect = window.innerWidth / window.innerHeight; camera.updateProjectionMatrix(); resize(); });
+
+      // pointer (mouse + touch) parallax: support pointer events & touch
+      const pointer = {x:0,y:0};
+      function onPointerMove(e){
+        let clientX = (e.touches && e.touches[0]) ? e.touches[0].clientX : e.clientX;
+        let clientY = (e.touches && e.touches[0]) ? e.touches[0].clientY : e.clientY;
+        pointer.x = (clientX / window.innerWidth) * 2 - 1;
+        pointer.y = -(clientY / window.innerHeight) * 2 + 1;
+      }
+      window.addEventListener('mousemove', onPointerMove, {passive:true});
+      window.addEventListener('touchmove', onPointerMove, {passive:true});
+
+      const clock = new THREE.Clock();
+      let t = 0;
+      function animate(){
+        t += clock.getDelta();
+        hearts.forEach((h, idx) => {
+          const ud = h.userData;
+          h.position.y = ud.baseY + Math.sin(t*ud.speed + idx) * (8 + ud.index*0.12);
+          h.position.x += Math.sin(t*0.15 + idx*0.08) * ud.drift;
+          h.rotation.x += 0.002 + (ud.index * 0.0002);
+          h.rotation.y += 0.003 + (ud.index * 0.0002);
+          if (h.material && h.material.emissive) h.material.emissiveIntensity = 0.03 + (Math.sin(t*0.6 + idx) + 1)*0.02;
+        });
+        // smooth parallax
+        gsap.to(group.position, { x: pointer.x * 90, y: pointer.y * 45, duration: 0.9, ease: 'power1.out' });
+        renderer.render(scene, camera);
+        requestAnimationFrame(animate);
+      }
+      animate();
+
+      // expose for finale
+      window.__threeHearts = { scene, hearts, renderer, camera, group };
+    })();
+
+    /* ---------- Finale: audio + confetti + heart swirl ---------- */
+    (function finale(){
+      const btn = document.getElementById('btn-5');
+      const finalText = document.getElementById('finalText');
+      const confettiCanvas = document.getElementById('confetti-canvas');
+      const chime = document.getElementById('chime');
+      const myConfetti = confetti.create(confettiCanvas, { resize: true, useWorker: true });
+
+      btn.addEventListener('click', ()=>{
+        btn.disabled = true;
+        gsap.to(btn, {duration:0.45, opacity:0, scale:0.98, pointerEvents:'none', ease:'power2.out'});
+
+        try{ chime.currentTime = 0; chime.volume = 0.85; chime.play(); } catch(e){}
+
+        gsap.to(finalText, {duration:0.9, opacity:1, y:0, ease:'elastic.out(1,0.6)', delay:0.18});
+
+        function cornerBurst(dir){ const originX = dir==='left'?0.05:0.95;
+          myConfetti({ particleCount:40, angle: dir==='left'?60:120, spread:45, startVelocity:50, origin:{x:originX,y:0.9}, scalar:1.02 });
+          myConfetti({ particleCount:30, angle: dir==='left'?40:140, spread:80, startVelocity:80, origin:{x:originX,y:0.92} });
+        }
+        cornerBurst('left'); cornerBurst('right');
+
+        const emojis = ['❤️','💖','✨','💫','💍','🥂'];
+        const endTime = Date.now() + 5000;
+        (function frame(){
+          myConfetti({ particleCount:12, angle:90, spread:120, startVelocity:30, origin:{x:Math.random()*0.6+0.2,y:0}, gravity:0.45 });
+          myConfetti({ particleCount:6, emoji: emojis[Math.floor(Math.random()*emojis.length)], startVelocity:22, origin:{x:Math.random()*0.8+0.1,y:0.02} });
+          if (Date.now() < endTime) requestAnimationFrame(frame);
+        })();
+
+        const three = window.__threeHearts;
+        if (three && three.hearts){
+          const hearts = three.hearts;
+          hearts.forEach((h,i)=>{
+            const delay = i*0.02;
+            gsap.to(h.position, { duration:2.6, y: h.position.y + 360 + Math.random()*240, x: h.position.x + (Math.random()-0.5)*600, z: h.position.z + 400 + Math.random()*300, ease: 'power4.out', delay });
+            gsap.to(h.material, { duration:2.4, opacity:0, delay: delay+0.2, ease:'power1.out', onComplete: ()=>{ try{ three.scene.remove(h); } catch(e){} } });
+          });
+        }
+
+        gsap.to('.aurora', { duration:4, scale:1.05, ease:'sine.inOut' });
+        gsap.fromTo(finalText, { textShadow: '0 0 0 rgba(255,255,255,0)' }, { textShadow: '0 8px 48px rgba(255,192,203,0.22)', duration:2.6, repeat:2, yoyo:true });
+      });
+    })();
+
+    /* ---------- Print card ---------- */
+    document.getElementById('printBtn').addEventListener('click', ()=>{
+      const polaroidImg = document.getElementById('polaroidImg');
+      const w = window.open('', '_blank');
+      const html = `<!doctype html><html><head><meta charset="utf-8"><title>Proposal Card</title><meta name="viewport" content="width=device-width,initial-scale=1"><style>body{font-family:Playfair Display,serif;margin:0;padding:40px;background:#fff;color:#111} .card{max-width:760px;margin:0 auto;padding:24px;border-radius:8px}</style></head><body><div class="card"><h1 style="font-size:32px">Will you marry me?</h1><p style="font-size:16px">My love,</p><p style="font-size:14px;line-height:1.5">I built this little world as a small space to tell you something enormous — I love you with all of me. Will you spend the rest of your life with me?</p><div style="margin-top:18px;text-align:center"><img src="${polaroidImg.src}" style="max-width:100%;border-radius:8px"/></div></div></body></html>`;
+      w.document.write(html);
+      w.document.close();
+      setTimeout(()=>{ w.focus(); w.print(); }, 600);
+    });
+
+    /* ---------- Entry animations ---------- */
+    gsap.from('.card', { duration:0.9, y:8, opacity:0, ease: 'power3.out' });
+    gsap.from('.big-icon', { duration:0.9, y:-6, opacity:0, stagger:0.06, delay:0.18 });
+    gsap.from('.title', { duration:0.9, y:8, opacity:0, stagger:0.05, delay:0.2 });
+
+    /* ---------- Accessibility: ensure initial active state visible on mobile ---------- */
+    if(window.innerWidth <= 860){
+      steps.forEach((s,i)=> s.classList.toggle('active', i===0));
+      // ensure first step on load is scrolled to top on small screens
+      setTimeout(()=>{ steps[0].scrollIntoView({behavior:'auto'}); }, 50);
+    }
+  </script>
+</body>
+</html>
